@@ -1,5 +1,5 @@
 import express from "express";
-import {postController, userController} from "../server.ts";
+import {postController} from "../server.ts";
 
 
 export const postRouter = express.Router();

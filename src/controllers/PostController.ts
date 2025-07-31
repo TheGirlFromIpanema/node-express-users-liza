@@ -1,8 +1,8 @@
 import {PostService} from "../services/posts/PostService.ts";
 import {IncomingMessage, ServerResponse} from "node:http";
-import {getRandomNumber, isPostType, isUserType, parseBody} from "../utils/tools.ts";
+import {getRandomNumber, isPostType, parseBody} from "../utils/tools.ts";
 import {myLogger} from "../utils/logger.ts";
-import {User} from "../model/userTypes.ts";
+
 import {Post} from "../model/postTypes.ts";
 import {baseUrl} from "../config/userServerConfig.ts";
 
