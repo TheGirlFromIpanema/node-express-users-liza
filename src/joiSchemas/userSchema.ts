@@ -6,6 +6,6 @@ export const UserDtoSchema = joi.object({
 
 export const userIDQueryValidation = {
     query: joi.object({
-        userId: joi.string().required()
+        userId: joi.string().optional()
     }),
 };

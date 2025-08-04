@@ -8,7 +8,7 @@ export const PostDtoSchema = joi.object({
 
 export const postIDQueryValidation = {
     query: joi.object({
-        postId: joi.string().required()
+        postId: joi.string().optional()
     }),
 };
 
