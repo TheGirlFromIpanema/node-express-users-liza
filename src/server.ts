@@ -1,10 +1,11 @@
-import express from 'express';
+import express, {Request, Response, NextFunction} from "express";
 import {apiRouter} from "./routes/appRouter.ts";
 import {UserServiceEmbeddedImpl} from "./services/users/UserServiceEmbeddedImpl.ts";
 import {UserController} from "./controllers/UserController.ts";
 import {myLogger} from "./utils/logger.ts";
 import {PostServiceEmbeddedImpl} from "./services/posts/PostServiceEmbeddedImpl.ts";
 import {PostController} from "./controllers/PostController.ts";
+import {HttpError} from "./errorHandler/HttpError.js";
 
 export const userService = new UserServiceEmbeddedImpl();
 export const postService = new PostServiceEmbeddedImpl();
@@ -16,9 +17,19 @@ export const postController = new PostController(postService);
 export const launchServer = () => {
     const app = express();
     app.listen(3009, () => console.log("Server runs at http://localhost:3009"))
+
+    app.use(express.json());
+
     app.use('/api', apiRouter)
     app.use((req, res) => {
         res.status(404).send("Page not found")
+    })
+
+    app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+        if(err instanceof HttpError)
+            res.status(err.status).send(err.message)
+        else
+            res.status(500).send("Unknown server error!")
     })
 
     process.on('SIGINT', async (code) => {
