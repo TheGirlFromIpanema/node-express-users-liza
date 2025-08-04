@@ -1,156 +1,105 @@
 import {PostService} from "../services/posts/PostService.ts";
-import {IncomingMessage, ServerResponse} from "node:http";
 import {getRandomNumber, isPostType, parseBody} from "../utils/tools.ts";
 import {myLogger} from "../utils/logger.ts";
 import {Post} from "../model/postTypes.ts";
 import {baseUrl} from "../config/userServerConfig.ts";
+import {Request, Response} from "express";
+import {PostDtoSchema} from "../joiSchemas/postSchema.js";
+import {HttpError} from "../errorHandler/HttpError.js";
 
 
 export class PostController {
-    constructor(private postService: PostService) {}
-
-    async addPost(req: IncomingMessage, res: ServerResponse) {
-        try {
-            const body = await parseBody(req);
-            if (body) {
-                if(!isPostType(body)){
-                    res.writeHead(400, {'Content-Type': 'text/html'})
-                    res.end('Bad request: wrong params!')
-                    myLogger.log('Wrong params!')
-                    return;
-                }
-                if (!(body as { id: string}).id) {
-                    (body as { id: string}).id = getRandomNumber(1000, 10000).toString()
-                }
-                const success = this.postService.addPost(body as Post)
-                if (success) {
-                    myLogger.save(`Post with id ${(body as { id: string }).id} was successfully added`)
-                    myLogger.log(`Post with id ${(body as { id: string }).id} was successfully added`)
-                } else {
-                    myLogger.save(`Post with id ${(body as { id: string }).id} already exists`)
-                    myLogger.log(`Post with id ${(body as { id: string }).id} already exists`)
-                }
-                res.writeHead(success ? 201 : 409, {"Content-Type": "text/plain"});
-                res.end(success ? "Post was added" : "Post already exists");
-                myLogger.log(`Response for add post with id ${(body as { id: string }).id} was send`)
-            }
-        } catch (e) {
-            res.writeHead(400, {"Content-Type": "text/plain"});
-            res.end("Invalid JSON");
-            myLogger.save(`Wrong JSON`);
-            myLogger.log(`Wrong JSON`);
-        }
+    constructor(private postService: PostService) {
     }
 
-    getAllPosts(req: IncomingMessage, res: ServerResponse) {
-        res.writeHead(200, {"Content-Type": "application/json"})
-        res.end(JSON.stringify(this.postService.getAllPosts()))
+    async addPost(req: Request, res: Response) {
+        const body = req.body;
+        const {error} = PostDtoSchema.validate(body);
+        if (error) throw new HttpError(400, error.message)
+        if (!isPostType(body)) {
+            throw new HttpError(400, 'Bad request: wrong params!')
+        }
+        if (!(body as { id: string }).id) {
+            (body as { id: string }).id = getRandomNumber(100, 999).toString();
+        }
+        const success = this.postService.addPost(body as Post)
+        myLogger.save(success ? `Post with id ${(body as { id: string }).id} was successfully added` :
+            `Post with id ${(body as { id: string }).id} already exists`)
+        myLogger.log(success ? `Post with id ${(body as { id: string }).id} was successfully added` :
+            `Post with id ${(body as { id: string }).id} already exists`)
+        res.status(success ? 201 : 409).send(success ? "Post was added" : "Post already exists")
+        myLogger.log(`Response for add post with id ${(body as { id: string }).id} was send`)
+    }
+
+    getAllPosts(req: Request, res: Response) {
+        res.status(200).send(JSON.stringify(this.postService.getAllPosts()))
         myLogger.log(`Response getAllPosts was send`)
     }
 
-    async updatePost(req: IncomingMessage, res: ServerResponse) {
-        try {
-            const body = await parseBody(req);
-            if (body) {
-                if(!isPostType(body)){
-                    res.writeHead(400, {'Content-Type': 'text/html'})
-                    res.end('Bad request: wrong params!')
-                    myLogger.log('Wrong params!')
-                    return;
-                }
-                if (!(body as { id: string}).id) {
-                    res.writeHead(400, {'Content-Type': 'text/html'})
-                    res.end('Bad request: Missing Id!')
-                    myLogger.log('Missing Id!')
-                    return;
-                }
-                const success = this.postService.updatePost(body as Post);
-                if (success) {
-                    myLogger.save(`Post with id ${(body as { id: string }).id} was successfully updated`)
-                    myLogger.log(`Post with id ${(body as { id: string }).id} was successfully updated`)
-                } else {
-                    myLogger.save(`Post with id ${(body as { id: string }).id} not exists`)
-                    myLogger.log(`Post with id ${(body as { id: string }).id} not exists`)
-                }
-                res.writeHead(success ? 200 : 409, {"Content-Type": "text/plain"});
-                res.end(success ? "Post was updated" : "Post not exists");
-                myLogger.log(`Response for update post with id ${(body as { id: string }).id} was send`)
-            }
-        } catch (e) {
-            res.writeHead(400, {"Content-Type": "text/plain"});
-            res.end("Invalid JSON");
-            myLogger.save(`Wrong JSON`);
-            myLogger.log(`Wrong JSON`);
+    async updatePost(req: Request, res: Response) {
+        const body = req.body;
+        const {error} = PostDtoSchema.validate(body);
+        if (error) throw new HttpError(400, error.message)
+        if (!isPostType(body)) {
+            throw new HttpError(400, 'Bad request: wrong params!')
         }
+        if (!(body as { id: string }).id) {
+            throw new HttpError(409, 'Bad request: Missing Id!')
+        }
+        const success = this.postService.updatePost(body as Post);
+        myLogger.save(success ? `Post with id ${(body as { id: string }).id} was successfully updated` :
+            `Post with id ${(body as { id: string }).id} not exists`)
+        myLogger.log(success ? `Post with id ${(body as { id: string }).id} was successfully updated` :
+            `Post with id ${(body as { id: string }).id} not exists`)
+        res.status(success ? 201 : 409).send(success ? "Post was updated" : "Post not exists")
+        myLogger.log(`Response for update post with id ${(body as { id: string }).id} was send`)
+
     }
 
-    async removePost(req: IncomingMessage, res: ServerResponse) {
-        try {
-            const body = await parseBody(req);
-            if (body) {
-                if (!(body as { id: string}).id) {
-                    res.writeHead(400, {'Content-Type': 'text/html'})
-                    res.end('Bad request: Missing Id!')
-                    myLogger.log('Missing Id!')
-                    return;
-                }
-                const removed = this.postService.removePost((body as { id: string }).id)
-                if (removed) {
-                    myLogger.save(`Post with id ${(body as { id: string }).id} was successfully removed`)
-                    myLogger.log(`Post with id ${(body as { id: string }).id} was successfully removed`)
-                } else {
-                    myLogger.save(`Post with id ${(body as { id: string }).id} not exists`)
-                    myLogger.log(`Post with id ${(body as { id: string }).id} not exists`)
-                }
-                res.writeHead(removed ? 200 : 409, {"Content-Type": "text/plain"});
-                res.end(removed ? "Post was removed" : "Post not exists");
-                myLogger.log(`Response for delete post with id ${(body as { id: string }).id} was send`)
-            }
-        } catch (e) {
-            res.writeHead(400, {"Content-Type": "text/plain"});
-            res.end("Invalid JSON");
-            myLogger.save(`Wrong JSON`);
-            myLogger.log(`Wrong JSON`);
+    async removePost(req: Request, res: Response) {
+        const body = req.body;
+        if (!(body as { id: string }).id) {
+            throw new HttpError(409, 'Bad request: Missing Id!')
         }
+        const removed = this.postService.removePost((body as { id: string }).id);
+        myLogger.save(removed ? `Post with id ${(body as { id: string }).id} was successfully removed` :
+            `Post with id ${(body as { id: string }).id} not exists`)
+        myLogger.log(removed ? `Post with id ${(body as { id: string }).id} was successfully removed` :
+            `Post with id ${(body as { id: string }).id} not exists`)
+        res.status(removed ? 201 : 409).send(removed ? "Post was removed" : "Post not exists")
+        myLogger.log(`Response for delete post with id ${(body as { id: string }).id} was send`)
     }
 
-    getPostById(req: IncomingMessage, res: ServerResponse) {
-        const url = new URL( req.url!, baseUrl);
+    getPostById(req: Request, res: Response) {
+        const url = new URL(req.url!, baseUrl);
         const id = url.searchParams.get('postId');
         if (!id) {
-            res.writeHead(409, {'Content-Type': 'text/html'})
-            res.end('no id was received to find post')
+            throw new HttpError(409, 'no id was received to find post')
         } else {
             const founded = this.postService.getPostById(id);
             if (founded !== null) {
-                res.writeHead(200, {'Content-Type': 'application/json'})
-                res.end(JSON.stringify(founded))
+                res.status(200).send(JSON.stringify(founded));
             } else {
-                res.writeHead(404, {'Content-Type': 'text/html'})
-                res.end('Post not found')
+                res.status(404).send('Post not found');
             }
         }
         myLogger.log(`Response post info with id ${id} was send`)
     }
 
-    getPostsByUserName(req: IncomingMessage, res: ServerResponse) {
-        const url = new URL( req.url!, baseUrl);
+    getPostsByUserName(req: Request, res: Response) {
+        const url = new URL(req.url!, baseUrl);
         const name = url.searchParams.get('userName');
         if (!name) {
-            res.writeHead(409, {'Content-Type': 'text/html'})
-            res.end('no user name was received to find posts')
+            throw new HttpError(409, 'no user name was received to find posts')
         } else {
             const founded = this.postService.getPostsByUserName(name);
             if (founded !== null) {
-                res.writeHead(200, {'Content-Type': 'application/json'})
-                res.end(JSON.stringify(founded))
+                res.status(200).send(JSON.stringify(founded));
             } else {
-                res.writeHead(404, {'Content-Type': 'text/html'})
-                res.end('Posts not found')
+                res.status(404).send('Posts not found');
             }
         }
         myLogger.log(`Response posts info for ${name} was send`)
     }
-
 
 }
