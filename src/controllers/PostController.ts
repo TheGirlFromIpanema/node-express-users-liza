@@ -1,8 +1,7 @@
 import {PostService} from "../services/posts/PostService.ts";
-import {getRandomNumber, isPostType, parseBody} from "../utils/tools.ts";
+import {getRandomNumber} from "../utils/tools.ts";
 import {myLogger} from "../utils/logger.ts";
 import {Post} from "../model/postTypes.ts";
-import {baseUrl} from "../config/userServerConfig.ts";
 import {Request, Response} from "express";
 import {PostDtoSchema} from "../joiSchemas/postSchema.js";
 import {HttpError} from "../errorHandler/HttpError.js";
@@ -14,11 +13,9 @@ export class PostController {
 
     async addPost(req: Request, res: Response) {
         const body = req.body;
+        if(!body) throw new HttpError(409, 'Bad request: Missing Body!')
         const {error} = PostDtoSchema.validate(body);
         if (error) throw new HttpError(400, error.message)
-        if (!isPostType(body)) {
-            throw new HttpError(400, 'Bad request: wrong params!')
-        }
         if (!(body as { id: string }).id) {
             (body as { id: string }).id = getRandomNumber(100, 999).toString();
         }
@@ -38,11 +35,9 @@ export class PostController {
 
     async updatePost(req: Request, res: Response) {
         const body = req.body;
+        if(!body) throw new HttpError(409, 'Bad request: Missing Body!')
         const {error} = PostDtoSchema.validate(body);
         if (error) throw new HttpError(400, error.message)
-        if (!isPostType(body)) {
-            throw new HttpError(400, 'Bad request: wrong params!')
-        }
         if (!(body as { id: string }).id) {
             throw new HttpError(409, 'Bad request: Missing Id!')
         }
@@ -71,8 +66,7 @@ export class PostController {
     }
 
     getPostById(req: Request, res: Response) {
-        const url = new URL(req.url!, baseUrl);
-        const id = url.searchParams.get('postId');
+        const id = req.query.postId as string | undefined;
         if (!id) {
             throw new HttpError(409, 'no id was received to find post')
         } else {
@@ -87,8 +81,7 @@ export class PostController {
     }
 
     getPostsByUserName(req: Request, res: Response) {
-        const url = new URL(req.url!, baseUrl);
-        const name = url.searchParams.get('userName');
+        const name = req.query.userName as string | undefined;
         if (!name) {
             throw new HttpError(409, 'no user name was received to find posts')
         } else {

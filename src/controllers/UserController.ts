@@ -1,8 +1,6 @@
-import {isUserType, parseBody} from "../utils/tools.ts";
 import {User} from "../model/userTypes.ts";
 import {myLogger} from "../utils/logger.ts";
 import {UserService} from "../services/users/UserService.ts";
-import {baseUrl} from "../config/userServerConfig.ts";
 import {HttpError} from "../errorHandler/HttpError.js";
 import {Request, Response} from "express";
 import {UserDtoSchema} from "../joiSchemas/userSchema.js";
@@ -14,11 +12,9 @@ export class UserController {
 
     async addUser(req: Request, res: Response) {
         const body = req.body;
+        if(!body) throw new HttpError(409, 'Bad request: Missing Body!')
         const {error} = UserDtoSchema.validate(body);
         if (error) throw new HttpError(400, error.message)
-        if (!isUserType(body)) {
-            throw new HttpError(400, 'Bad request: wrong params!')
-        }
         const success = this.userService.addUser(body as User)
         myLogger.save(success ? `User with id ${(body as { id: number }).id} was successfully added` :
             `User with id ${(body as { id: number }).id} already exists`)
@@ -35,11 +31,9 @@ export class UserController {
 
     async updateUser(req: Request, res: Response) {
         const body = req.body;
+        if(!body) throw new HttpError(409, 'Bad request: Missing Body!')
         const {error} = UserDtoSchema.validate(body);
         if (error) throw new HttpError(400, error.message);
-        if (!isUserType(body)) {
-            throw new HttpError(400, 'Bad request: wrong params!')
-        }
         const success = this.userService.updateUser(body as User);
         myLogger.save(success ? `User with id ${(body as { id: number }).id} was successfully updated` :
             `User with id ${(body as { id: number }).id}  not exists`)
@@ -64,8 +58,7 @@ export class UserController {
     }
 
     getUser(req: Request, res: Response) {
-        const url = new URL(req.url!, baseUrl);
-        const id = url.searchParams.get('userId');
+        const id = req.query.userId as string | undefined;
         if (!id || Number.isNaN(parseInt(id))) {
             throw new HttpError(400, 'Bad request: wrong params!')
         }

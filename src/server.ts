@@ -6,6 +6,7 @@ import {myLogger} from "./utils/logger.ts";
 import {PostServiceEmbeddedImpl} from "./services/posts/PostServiceEmbeddedImpl.ts";
 import {PostController} from "./controllers/PostController.ts";
 import {HttpError} from "./errorHandler/HttpError.js";
+import {ValidationError} from "express-validation";
 
 export const userService = new UserServiceEmbeddedImpl();
 export const postService = new PostServiceEmbeddedImpl();
@@ -26,6 +27,9 @@ export const launchServer = () => {
     })
 
     app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+        if (err instanceof ValidationError) {
+            return res.status(err.statusCode).json(err);
+        }
         if(err instanceof HttpError)
             res.status(err.status).send(err.message)
         else

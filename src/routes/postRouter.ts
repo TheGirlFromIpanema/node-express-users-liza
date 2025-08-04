@@ -1,7 +1,9 @@
-import express, {Request, Response, NextFunction} from "express";
+import express, {Request, Response, NextFunction, RequestHandler} from "express";
 import {postController} from "../server.ts";
 import {myLogger} from "../utils/logger.ts";
 import asyncHandler from "express-async-handler"
+import {validate} from "express-validation";
+import {postIDQueryValidation, postUserNameQueryValidation} from "../joiSchemas/postSchema.js";
 
 export const postRouter = express.Router();
 
@@ -15,10 +17,12 @@ postRouter.use((req: Request, res: Response, next: NextFunction) => {
 })
 
 
-postRouter.get("/", asyncHandler((req, res) => {
-    if (req.query.postId) postController.getPostById(req, res)
-    postController.getAllPosts(req, res)
-}))
+postRouter.get("/", validate(postIDQueryValidation, {}, {}) as unknown as RequestHandler,
+    asyncHandler((req, res) => {
+        if (req.query.postId) postController.getPostById(req, res);
+        else postController.getAllPosts(req, res);
+    })
+);
 
 postRouter.post("/", asyncHandler(async (req, res) => {
     await postController.addPost(req, res)
@@ -32,6 +36,7 @@ postRouter.delete("/", asyncHandler(async (req, res) => {
     await postController.removePost(req, res)
 }))
 
-postRouter.get("/user", asyncHandler((req, res) => {
-    postController.getPostsByUserName(req, res)
-}))
+postRouter.get("/user", validate(postUserNameQueryValidation, {}, {}) as unknown as RequestHandler,
+    asyncHandler((req, res) => {
+        postController.getPostsByUserName(req, res)
+    }))
